@@ -66,6 +66,8 @@ API_IDENTIFIER = os.environ.get('API_IDENTIFIER', f"https://{AUTH0_DOMAIN}/api/v
 
 AT_USERNAME = os.environ.get('AT_USERNAME', 'sandbox')
 AT_API_KEY = os.environ.get('AT_API_KEY', '')
+USE_TOKEN_MIDDLEWARE = os.environ.get('USE_TOKEN_MIDDLEWARE', 'False').lower() == 'true'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -76,6 +78,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if USE_TOKEN_MIDDLEWARE:
+    MIDDLEWARE.append('sms_service.auth_middleware.Auth0TokenMiddleware')
 
 ROOT_URLCONF = 'sms_service.urls'
 
@@ -101,14 +106,23 @@ WSGI_APPLICATION = 'sms_service.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'sms_service'),
+        'USER': os.environ.get('DB_USER', 'sms_user'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'your_secure_password'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
-
-
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
