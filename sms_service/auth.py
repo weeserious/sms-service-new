@@ -94,3 +94,19 @@ def base64_to_int(value):
     
     decoded = base64.b64decode(value)
     return int.from_bytes(decoded, byteorder='big')
+
+def get_token_auth_header(request):
+    """Extract the token from the Authorization header"""
+    auth = request.headers.get('Authorization', None)
+    if not auth:
+        return None
+
+    parts = auth.split()
+    if parts[0].lower() != 'bearer':
+        return None
+
+    if len(parts) == 1 or len(parts) > 2:
+        return None
+
+    token = parts[1]
+    return token
