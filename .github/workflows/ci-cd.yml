@@ -62,7 +62,7 @@ jobs:
     
     steps:
     - name: Install SSH debug tools
-      run: sudo apt-get install -y netcat
+      run: sudo apt-get install -y netcat-openbsd
 
     - name: Check basic connectivity
       run: nc -zv ${{ secrets.HOST }} 22 -w 10
@@ -72,9 +72,9 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/private_key
         chmod 600 ~/.ssh/private_key
-        echo "${{ secrets.HOST }} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIvDOpIN5KaoC4+bpHS43aDJjr8V3wwNMzBymeVhq7mk" > ~/.ssh/known_hosts
+        ssh-keyscan ${{ secrets.HOST }} >> ~/.ssh/known_hosts
         
     - name: Debug SSH connection
       run: |
         echo "Testing connection with verbose logging..."
-        ssh -v -i ~/.ssh/private_key ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'echo "Connection successful"' || echo "SSH connection failed"
+        ssh -vvv -i ~/.ssh/private_key ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'echo "Connection successful"' || echo "SSH connection failed"
