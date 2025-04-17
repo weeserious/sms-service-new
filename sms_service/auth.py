@@ -1,5 +1,6 @@
 import jwt 
 import requests
+import sys
 from functools import wraps
 from django.http import JsonResponse
 from django.conf import settings
@@ -9,10 +10,10 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicNumbers
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 import base64
-import sys
 
 def is_test_environment():
     return 'test' in sys.argv
+
 def get_token_auth_header(request):
     """Extract the token from the Authorization header"""
     auth = request.headers.get('Authorization', None)
@@ -33,9 +34,8 @@ def requires_auth(f):
     """Decorator to validate access tokens"""
     @wraps(f)
     def decorated(request, *args, **kwargs):
-	    if is_test_environment() or (settings.DEBUG and os.environ.get('EXEMPT_VIEWS_FROM_LOGIN') == 'True'):
-            return f(request, *args, **kwargs)
-        if settings.DEBUG and os.environ.get('EXEMPT_VIEWS_FROM_LOGIN') == 'True':
+        # Skip auth in test environment or when explicitly exempted
+        if is_test_environment() or (settings.DEBUG and os.environ.get('EXEMPT_VIEWS_FROM_LOGIN') == 'True'):
             return f(request, *args, **kwargs)
             
         token = get_token_auth_header(request)
@@ -74,7 +74,7 @@ def requires_auth(f):
             return JsonResponse({"error": "Invalid token"}, status=401)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=401)
-            
+             
     return decorated
 
 def jwk_to_pem(jwk):
@@ -99,19 +99,3 @@ def base64_to_int(value):
     
     decoded = base64.b64decode(value)
     return int.from_bytes(decoded, byteorder='big')
-
-def get_token_auth_header(request):
-    """Extract the token from the Authorization header"""
-    auth = request.headers.get('Authorization', None)
-    if not auth:
-        return None
-
-    parts = auth.split()
-    if parts[0].lower() != 'bearer':
-        return None
-
-    if len(parts) == 1 or len(parts) > 2:
-        return None
-
-    token = parts[1]
-    return token
