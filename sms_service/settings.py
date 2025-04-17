@@ -11,7 +11,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,6 +43,7 @@ INSTALLED_APPS = [
     'customers',
     'orders',
     'mozilla_django_oidc',
+    'rest_framework'
 
 ]
 
@@ -48,13 +52,20 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-OIDC_RP_CLIENT_ID = 'your-client-id'
-OIDC_RP_CLIENT_SECRET = 'your-client-secret'
-OIDC_OP_AUTHORIZATION_ENDPOINT = 'https://example.com/authorize'
-OIDC_OP_TOKEN_ENDPOINT = 'https://example.com/oauth/token'
-OIDC_OP_USER_ENDPOINT = 'https://example.com/userinfo'
-LOGIN_REDIRECT_URL = '/api/customers/'
-LOGOUT_REDIRECT_URL = '/api/customers/'
+OIDC_RP_CLIENT_ID = os.environ.get('OIDC_RP_CLIENT_ID', '')
+OIDC_RP_CLIENT_SECRET = os.environ.get('OIDC_RP_CLIENT_SECRET', '')
+AUTH0_DOMAIN = os.environ.get('AUTH0_DOMAIN', 'dev-546uldu40crwzczp.us.auth0.com')
+OIDC_OP_AUTHORIZATION_ENDPOINT = f"https://{AUTH0_DOMAIN}/authorize"
+OIDC_OP_TOKEN_ENDPOINT = f"https://{AUTH0_DOMAIN}/oauth/token"
+OIDC_OP_USER_ENDPOINT = f"https://{AUTH0_DOMAIN}/userinfo"
+OIDC_OP_JWKS_ENDPOINT = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
+LOGIN_REDIRECT_URL = os.environ.get('LOGIN_REDIRECT_URL', '/api/customers/')
+LOGOUT_REDIRECT_URL = os.environ.get('LOGOUT_REDIRECT_URL', '/api/customers/')
+LOGIN_URL = os.environ.get('LOGIN_URL', '/oidc/authenticate/')
+API_IDENTIFIER = os.environ.get('API_IDENTIFIER', f"https://{AUTH0_DOMAIN}/api/v2/")
+
+AT_USERNAME = os.environ.get('AT_USERNAME', 'sandbox')
+AT_API_KEY = os.environ.get('AT_API_KEY', '')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -138,3 +149,4 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+EXEMPT_VIEWS_FROM_LOGIN = False

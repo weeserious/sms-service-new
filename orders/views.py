@@ -6,7 +6,12 @@ from customers.models import Customer
 from .sms import send_order_notification
 import json
 from decimal import Decimal
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from sms_service.auth import requires_auth
 
+@csrf_exempt
+@requires_auth
 def order_list(request):
     orders = Order.objects.all()
     data = []
@@ -21,6 +26,8 @@ def order_list(request):
         })
     return JsonResponse(data, safe=False)
 
+@csrf_exempt
+@requires_auth
 def order_detail(request, pk):
     order = get_object_or_404(Order, pk=pk)
     data = {
@@ -33,6 +40,8 @@ def order_detail(request, pk):
     }
     return JsonResponse(data)
 
+@csrf_exempt
+@requires_auth
 def order_create(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -50,6 +59,8 @@ def order_create(request):
             return JsonResponse({'error': f"Customer with ID {customer_id} does not exist"}, status=400)
         
         try:
+            if isinstance(amount, str):
+                amount = amount.replace(',', '')
             amount = Decimal(amount)
         except:
             return JsonResponse({'error': 'Amount must be a valid number'}, status=400)
@@ -79,6 +90,8 @@ def order_create(request):
         
     return JsonResponse({'error': 'Only POST method allowed'}, status=405)
 
+@csrf_exempt
+@requires_auth
 def order_update(request, pk):
     order = get_object_or_404(Order, pk=pk)
     
@@ -93,6 +106,8 @@ def order_update(request, pk):
         
         if amount:
             try:
+                if isinstance(amount, str):
+                    amount = amount.replace(',', '')
                 order.amount = Decimal(amount)
             except:
                 return JsonResponse({'error': 'Amount must be a valid number'}, status=400)
@@ -110,6 +125,8 @@ def order_update(request, pk):
         
     return JsonResponse({'error': 'Only PUT method allowed'}, status=405)
 
+@csrf_exempt
+@requires_auth
 def order_delete(request, pk):
     order = get_object_or_404(Order, pk=pk)
     

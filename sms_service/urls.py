@@ -21,5 +21,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/customers/', include('customers.urls')),
     path('api/orders/', include('orders.urls')),
-
+    path('oidc/', include('mozilla_django_oidc.urls')),
 ]

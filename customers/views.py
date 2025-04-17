@@ -1,8 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
 from .models import Customer
 import json
+from django.views.decorators.csrf import csrf_exempt
+from sms_service.auth import requires_auth
 
+
+@csrf_exempt
+@requires_auth
 def customer_list(request):
     customers = Customer.objects.all()
     data = []
@@ -16,6 +22,8 @@ def customer_list(request):
         })
     return JsonResponse(data, safe=False)
 
+@csrf_exempt
+@requires_auth
 def customer_detail(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     data = {
@@ -27,6 +35,8 @@ def customer_detail(request, pk):
     }
     return JsonResponse(data)
 
+@csrf_exempt
+@requires_auth
 def customer_create(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -62,6 +72,8 @@ def customer_create(request):
         
     return JsonResponse({'error': 'Only POST method allowed'}, status=405)
 
+@csrf_exempt
+@requires_auth
 def customer_update(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     
@@ -95,6 +107,8 @@ def customer_update(request, pk):
         
     return JsonResponse({'error': 'Only PUT method allowed'}, status=405)
 
+@csrf_exempt
+@requires_auth
 def customer_delete(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     
