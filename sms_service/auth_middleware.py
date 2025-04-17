@@ -1,9 +1,12 @@
 import time
 import requests
 import threading
+import sys
 from django.conf import settings
 from django.http import JsonResponse
-import sys
+
+def is_test_environment():
+    return 'test' in sys.argv
 
 class Auth0TokenMiddleware:
     """
@@ -16,14 +19,15 @@ class Auth0TokenMiddleware:
     
     _token = None
     _token_expiry = 0
-    _token_lock = threading.RLock()  
+    _token_lock = threading.RLock()  # Thread-safe token updates
     
     def __init__(self, get_response):
         self.get_response = get_response
         
     def __call__(self, request):
-	    if is_test_environment():
+        if is_test_environment():
             return self.get_response(request)
+            
         if 'oidc' in request.path or 'admin' in request.path or 'generate-token' in request.path:
             return self.get_response(request)
             
@@ -59,9 +63,6 @@ class Auth0TokenMiddleware:
             
             return cls._token
     
-    def is_test_environment():
-    	return 'test' in sys.argv
-
     @staticmethod
     def _fetch_new_token():
         """Fetch a new token from Auth0."""
