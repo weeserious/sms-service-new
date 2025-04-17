@@ -1,11 +1,9 @@
 name: Django CI/CD
-
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -23,7 +21,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -49,7 +46,8 @@ jobs:
         API_IDENTIFIER: test_identifier
         AT_USERNAME: sandbox
         AT_API_KEY: test_key
-        EXEMPT_VIEWS_FROM_LOGIN: True
+        EXEMPT_VIEWS_FROM_LOGIN: False
+        USE_TOKEN_MIDDLEWARE: True
       run: |
         python manage.py test
     
@@ -57,7 +55,6 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         fail_ci_if_error: false
-
   deploy:
     needs: test
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
