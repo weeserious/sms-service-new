@@ -22,7 +22,7 @@ class Auth0TokenMiddleware:
         self.get_response = get_response
         
     def __call__(self, request):
-	if is_test_environment():
+	    if is_test_environment():
             return self.get_response(request)
         if 'oidc' in request.path or 'admin' in request.path or 'generate-token' in request.path:
             return self.get_response(request)

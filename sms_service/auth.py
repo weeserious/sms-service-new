@@ -33,7 +33,7 @@ def requires_auth(f):
     """Decorator to validate access tokens"""
     @wraps(f)
     def decorated(request, *args, **kwargs):
-	if is_test_environment() or (settings.DEBUG and os.environ.get('EXEMPT_VIEWS_FROM_LOGIN') == 'True'):
+	    if is_test_environment() or (settings.DEBUG and os.environ.get('EXEMPT_VIEWS_FROM_LOGIN') == 'True'):
             return f(request, *args, **kwargs)
         if settings.DEBUG and os.environ.get('EXEMPT_VIEWS_FROM_LOGIN') == 'True':
             return f(request, *args, **kwargs)
