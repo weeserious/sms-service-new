@@ -66,10 +66,11 @@ jobs:
         echo "GitHub Actions Runner IP:"
         curl -s ipinfo.io
         echo "Checking connectivity to port 22:"
-        nc -zv 165.232.185.158 22 -w 15 || echo "Port 22 unreachable"
+        nc -zv ${{ secrets.HOST }} 22 -w 15 || echo "Port 22 unreachable"
         echo "Checking connectivity to port 2222:"
-        nc -zv 165.232.185.158 2222 -w 15 || echo "Port 2222 unreachable"
+        nc -zv ${{ secrets.HOST }} 2222 -w 15 || echo "Port 2222 unreachable"
       continue-on-error: true
+      
         
     - name: Prepare SSH
       run: |
