@@ -61,20 +61,54 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Install SSH debug tools
-      run: sudo apt-get install -y netcat-openbsd
-
-    - name: Check basic connectivity
-      run: nc -zv ${{ secrets.HOST }} 22 -w 10
+    - name: Extended network diagnostics
+      run: |
+        echo "GitHub Actions Runner information:"
+        curl -s ipinfo.io
+        echo "----------------------------"
+        echo "DNS resolution check:"
+        host ${{ secrets.HOST }}
+        dig +short ${{ secrets.HOST }}
+        echo "----------------------------"
+        echo "Basic connectivity check with ICMP:"
+        ping -c 3 ${{ secrets.HOST }} || echo "Ping failed (may be blocked)"
+        echo "----------------------------"
+        echo "TCP connection test with increased verbosity and timeout:"
+        timeout 30s nc -zv ${{ secrets.HOST }} 22 -w 20
+      continue-on-error: true
       
-    - name: Prepare SSH
+    - name: Check GitHub IP ranges
+      run: |
+        echo "GitHub Actions IP ranges:"
+        curl -s https://api.github.com/meta | jq -r '.actions | join("\n")' || echo "Failed to get GitHub IP ranges"
+        
+    - name: Try alternative SSH connection methods
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/private_key
-        chmod 600 ~/.ssh/private_key
-        ssh-keyscan ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
         
-    - name: Debug SSH connection
+        echo "Attempting connection with specific options:"
+        ssh -v -o ConnectTimeout=30 -o ServerAliveInterval=10 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'echo "TEST CONNECTION"'
+      continue-on-error: true
+      
+    - name: Try SSH via proxy
       run: |
-        echo "Testing connection with verbose logging..."
-        ssh -vvv -i ~/.ssh/private_key ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'echo "Connection successful"' || echo "SSH connection failed"
+        echo "Installing proxy tool:"
+        sudo apt-get install -y socat
+        
+        echo "Attempting SSH through proxy:"
+        socat TCP-LISTEN:2222,fork TCP:${{ secrets.HOST }}:22 &
+        sleep 5
+        ssh -v -o ConnectTimeout=30 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@localhost -p 2222 'echo "PROXY TEST"'
+      continue-on-error: true
+      
+    - name: Final deployment attempt
+      run: |
+        # Use all the options we can to make this resilient
+        ssh -o ConnectTimeout=60 -o ServerAliveInterval=10 -o ServerAliveCountMax=6 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} '
+          cd /opt/sms_service/sms-service &&
+          git pull origin main &&
+          # Add additional deployment commands here
+          echo "Deployment completed"
+        '
