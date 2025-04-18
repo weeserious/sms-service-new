@@ -19,7 +19,7 @@ class Auth0TokenMiddleware:
     
     _token = None
     _token_expiry = 0
-    _token_lock = threading.RLock()  # Thread-safe token updates
+    _token_lock = threading.RLock()  
     
     def __init__(self, get_response):
         self.get_response = get_response
