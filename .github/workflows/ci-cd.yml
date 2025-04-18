@@ -73,6 +73,6 @@ jobs:
       run: |
         ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} '
           cd /opt/sms_service/sms-service &&
-          git pull origin main &&
+          git pull https://github.com/weeserious/sms-service-new.git main &&
           echo "Deployment completed successfully at $(date)"
         '
