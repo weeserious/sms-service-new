@@ -9,8 +9,36 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from sms_service.auth import requires_auth
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get a list of all orders",
+    responses={
+        200: openapi.Response(
+            description="Successful operation",
+            schema=openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'customer_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'customer_name': openapi.Schema(type=openapi.TYPE_STRING),
+                        'item': openapi.Schema(type=openapi.TYPE_STRING),
+                        'amount': openapi.Schema(type=openapi.TYPE_STRING),
+                        'order_time': openapi.Schema(type=openapi.TYPE_STRING, format='date-time'),
+                    }
+                )
+            )
+        ),
+        401: openapi.Response(description="Unauthorized")
+    }
+)
+@api_view(['GET'])
 @requires_auth
 def order_list(request):
     orders = Order.objects.all()
@@ -24,9 +52,29 @@ def order_list(request):
             'amount': str(order.amount),
             'order_time': order.order_time.isoformat()
         })
-    return JsonResponse(data, safe=False)
+    return Response(data)
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get details of a specific order",
+    responses={
+        200: openapi.Response(
+            description="Successful operation",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'customer_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'customer_name': openapi.Schema(type=openapi.TYPE_STRING),
+                    'item': openapi.Schema(type=openapi.TYPE_STRING),
+                    'amount': openapi.Schema(type=openapi.TYPE_STRING),
+                    'order_time': openapi.Schema(type=openapi.TYPE_STRING, format='date-time'),
+                }
+            )
+        ),
+    }
+)
+@api_view(['GET'])
 @requires_auth
 def order_detail(request, pk):
     order = get_object_or_404(Order, pk=pk)
@@ -38,32 +86,61 @@ def order_detail(request, pk):
         'amount': str(order.amount),
         'order_time': order.order_time.isoformat()
     }
-    return JsonResponse(data)
+    return Response(data)
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='post',
+    operation_description="Create a new order",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['customer_id', 'item', 'amount'],
+        properties={
+            'customer_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'item': openapi.Schema(type=openapi.TYPE_STRING),
+            'amount': openapi.Schema(type=openapi.TYPE_STRING, description="Decimal amount (can include comma as thousand separator)"),
+        }
+    ),
+    responses={
+        201: openapi.Response(
+            description="Order created successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'customer_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'customer_name': openapi.Schema(type=openapi.TYPE_STRING),
+                    'item': openapi.Schema(type=openapi.TYPE_STRING),
+                    'amount': openapi.Schema(type=openapi.TYPE_STRING),
+                    'order_time': openapi.Schema(type=openapi.TYPE_STRING, format='date-time'),
+                }
+            )
+        )
+    }
+)
+@api_view(['POST'])
 @requires_auth
 def order_create(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
+        data = request.data
         
         customer_id = data.get('customer_id')
         item = data.get('item')
         amount = data.get('amount')
         
         if not all([customer_id, item, amount]):
-            return JsonResponse({'error': 'All fields are required'}, status=400)
+            return Response({'error': 'All fields are required'}, status=400)
         
         try:
             customer = Customer.objects.get(id=customer_id)
         except Customer.DoesNotExist:
-            return JsonResponse({'error': f"Customer with ID {customer_id} does not exist"}, status=400)
+            return Response({'error': f"Customer with ID {customer_id} does not exist"}, status=400)
         
         try:
             if isinstance(amount, str):
                 amount = amount.replace(',', '')
             amount = Decimal(amount)
         except:
-            return JsonResponse({'error': 'Amount must be a valid number'}, status=400)
+            return Response({'error': 'Amount must be a valid number'}, status=400)
         
         with transaction.atomic():
             order = Order.objects.create(
@@ -79,7 +156,7 @@ def order_create(request):
                 str(order.amount)
             )
         
-        return JsonResponse({
+        return Response({
             'id': order.id,
             'customer_id': order.customer.id,
             'customer_name': order.customer.name,
@@ -87,16 +164,42 @@ def order_create(request):
             'amount': str(order.amount),
             'order_time': order.order_time.isoformat()
         }, status=201)
-        
-    return JsonResponse({'error': 'Only POST method allowed'}, status=405)
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='put',
+    operation_description="Update an existing order",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'item': openapi.Schema(type=openapi.TYPE_STRING),
+            'amount': openapi.Schema(type=openapi.TYPE_STRING, description="Decimal amount (can include comma as thousand separator)"),
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="Order updated successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'customer_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'customer_name': openapi.Schema(type=openapi.TYPE_STRING),
+                    'item': openapi.Schema(type=openapi.TYPE_STRING),
+                    'amount': openapi.Schema(type=openapi.TYPE_STRING),
+                    'order_time': openapi.Schema(type=openapi.TYPE_STRING, format='date-time'),
+                }
+            )
+        ),
+        
+    }
+)
+@api_view(['PUT'])
 @requires_auth
 def order_update(request, pk):
     order = get_object_or_404(Order, pk=pk)
     
     if request.method == 'PUT':
-        data = json.loads(request.body)
+        data = request.data
         
         item = data.get('item')
         amount = data.get('amount')
@@ -110,11 +213,11 @@ def order_update(request, pk):
                     amount = amount.replace(',', '')
                 order.amount = Decimal(amount)
             except:
-                return JsonResponse({'error': 'Amount must be a valid number'}, status=400)
+                return Response({'error': 'Amount must be a valid number'}, status=400)
         
         order.save()
         
-        return JsonResponse({
+        return Response({
             'id': order.id,
             'customer_id': order.customer.id,
             'customer_name': order.customer.name,
@@ -122,16 +225,22 @@ def order_update(request, pk):
             'amount': str(order.amount),
             'order_time': order.order_time.isoformat()
         })
-        
-    return JsonResponse({'error': 'Only PUT method allowed'}, status=405)
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='delete',
+    operation_description="Delete an order",
+    responses={
+        204: openapi.Response(description="Order deleted successfully"),
+        401: openapi.Response(description="Unauthorized"),
+        404: openapi.Response(description="Order not found"),
+        405: openapi.Response(description="Method not allowed")
+    }
+)
+@api_view(['DELETE'])
 @requires_auth
 def order_delete(request, pk):
     order = get_object_or_404(Order, pk=pk)
     
     if request.method == 'DELETE':
         order.delete()
-        return JsonResponse({}, status=204)
-        
-    return JsonResponse({'error': 'Only DELETE method allowed'}, status=405)
+        return Response(status=204)

@@ -5,9 +5,35 @@ from .models import Customer
 import json
 from django.views.decorators.csrf import csrf_exempt
 from sms_service.auth import requires_auth
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
-
-@csrf_exempt
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get a list of all customers",
+    responses={
+        200: openapi.Response(
+            description="Successful operation",
+            schema=openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'name': openapi.Schema(type=openapi.TYPE_STRING),
+                        'code': openapi.Schema(type=openapi.TYPE_STRING),
+                        'phone': openapi.Schema(type=openapi.TYPE_STRING),
+                        'email': openapi.Schema(type=openapi.TYPE_STRING),
+                    }
+                )
+            )
+        ),
+        401: openapi.Response(description="Unauthorized")
+    }
+)
+@api_view(['GET'])
 @requires_auth
 def customer_list(request):
     customers = Customer.objects.all()
@@ -20,9 +46,29 @@ def customer_list(request):
             'phone': customer.phone,
             'email': customer.email
         })
-    return JsonResponse(data, safe=False)
+    return Response(data)
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get details of a specific customer",
+    responses={
+        200: openapi.Response(
+            description="Successful operation",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'name': openapi.Schema(type=openapi.TYPE_STRING),
+                    'code': openapi.Schema(type=openapi.TYPE_STRING),
+                    'phone': openapi.Schema(type=openapi.TYPE_STRING),
+                    'email': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        
+    }
+)
+@api_view(['GET'])
 @requires_auth
 def customer_detail(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
@@ -33,13 +79,42 @@ def customer_detail(request, pk):
         'phone': customer.phone,
         'email': customer.email
     }
-    return JsonResponse(data)
+    return Response(data)
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='post',
+    operation_description="Create a new customer",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['name', 'code', 'phone', 'email'],
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING),
+            'code': openapi.Schema(type=openapi.TYPE_STRING),
+            'phone': openapi.Schema(type=openapi.TYPE_STRING),
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+        }
+    ),
+    responses={
+        201: openapi.Response(
+            description="Customer created successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'name': openapi.Schema(type=openapi.TYPE_STRING),
+                    'code': openapi.Schema(type=openapi.TYPE_STRING),
+                    'phone': openapi.Schema(type=openapi.TYPE_STRING),
+                    'email': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        )
+    }
+)
+@api_view(['POST'])
 @requires_auth
 def customer_create(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
+        data = request.data
         
         name = data.get('name')
         code = data.get('code')
@@ -47,13 +122,13 @@ def customer_create(request):
         email = data.get('email')
         
         if not all([name, code, phone, email]):
-            return JsonResponse({'error': 'All fields are required'}, status=400)
+            return Response({'error': 'All fields are required'}, status=400)
         
         if Customer.objects.filter(code=code).exists():
-            return JsonResponse({'error': f"Customer with code '{code}' already exists"}, status=400)
+            return Response({'error': f"Customer with code '{code}' already exists"}, status=400)
             
         if Customer.objects.filter(email=email).exists():
-            return JsonResponse({'error': f"Customer with email '{email}' already exists"}, status=400)
+            return Response({'error': f"Customer with email '{email}' already exists"}, status=400)
         
         customer = Customer.objects.create(
             name=name,
@@ -62,23 +137,48 @@ def customer_create(request):
             email=email
         )
         
-        return JsonResponse({
+        return Response({
             'id': customer.id,
             'name': customer.name,
             'code': customer.code,
             'phone': customer.phone,
             'email': customer.email
         }, status=201)
-        
-    return JsonResponse({'error': 'Only POST method allowed'}, status=405)
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='put',
+    operation_description="Update an existing customer",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING),
+            'phone': openapi.Schema(type=openapi.TYPE_STRING),
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="Customer updated successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'name': openapi.Schema(type=openapi.TYPE_STRING),
+                    'code': openapi.Schema(type=openapi.TYPE_STRING),
+                    'phone': openapi.Schema(type=openapi.TYPE_STRING),
+                    'email': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        )
+    }
+)
+@api_view(['PUT'])
 @requires_auth
 def customer_update(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     
     if request.method == 'PUT':
-        data = json.loads(request.body)
+        data = request.data
         
         name = data.get('name')
         phone = data.get('phone')
@@ -92,28 +192,34 @@ def customer_update(request, pk):
             
         if email:
             if Customer.objects.exclude(id=customer.id).filter(email=email).exists():
-                return JsonResponse({'error': f"Customer with email '{email}' already exists"}, status=400)
+                return Response({'error': f"Customer with email '{email}' already exists"}, status=400)
             customer.email = email
         
         customer.save()
         
-        return JsonResponse({
+        return Response({
             'id': customer.id,
             'name': customer.name,
             'code': customer.code,
             'phone': customer.phone,
             'email': customer.email
         })
-        
-    return JsonResponse({'error': 'Only PUT method allowed'}, status=405)
 
-@csrf_exempt
+@swagger_auto_schema(
+    method='delete',
+    operation_description="Delete a customer",
+    responses={
+        204: openapi.Response(description="Customer deleted successfully"),
+        401: openapi.Response(description="Unauthorized"),
+        404: openapi.Response(description="Customer not found"),
+        405: openapi.Response(description="Method not allowed")
+    }
+)
+@api_view(['DELETE'])
 @requires_auth
 def customer_delete(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     
     if request.method == 'DELETE':
         customer.delete()
-        return JsonResponse({}, status=204)
-        
-    return JsonResponse({'error': 'Only DELETE method allowed'}, status=405)
+        return Response(status=204)
